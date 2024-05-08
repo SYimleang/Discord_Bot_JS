@@ -18,7 +18,26 @@ const client = new Client({
 });
 
 // Arrays of words
-const sadWords = ["sad", "depressed", "unhappy", "angry"];
+const sadWords = [
+  "angry",
+  "crestfallen",
+  "dejected",
+  "despairing",
+  "depressed",
+  "disheartened",
+  "dismal",
+  "dispirited",
+  "downcast",
+  "gloomy",
+  "glum",
+  "heartbroken",
+  "hopeless",
+  "mournful",
+  "sad",
+  "sorrowful",
+  "unhappy",
+  "woeful",
+];
 const starterEncouragements = [
   "Cheer up!",
   "Hang in there.",
@@ -164,7 +183,7 @@ client.on("messageCreate", async (msg) => {
               encouragements.value[
                 Math.floor(Math.random() * encouragements.value.length)
               ];
-            msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
+            msg.reply(encouragement);
           });
         }
       });
