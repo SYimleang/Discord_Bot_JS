@@ -1,9 +1,12 @@
 // Require the necessary discord.js classes
 import { Client, GatewayIntentBits, REST, Routes } from "discord.js";
 import fetch from "node-fetch";
+import Database from "@replit/database";
 const token = process.env["token"];
 const guildId = process.env["guildId"];
 const clientId = process.env["clientId"];
+
+const db = new Database();
 
 // Create a new client instance
 const client = new Client({
@@ -16,21 +19,68 @@ const client = new Client({
 
 // Arrays of words
 const sadWords = ["sad", "depressed", "unhappy", "angry"];
-const encouragements = [
+const starterEncouragements = [
   "Cheer up!",
   "Hang in there.",
   "You are a great person!",
 ];
 
+// db.delete("encouragements");
+
+// Function to get the encouragements from database or set default
+db.get("encouragements").then((encouragements) => {
+  // console.log(encouragements);
+  if (!encouragements.ok || encouragements.length < 1) {
+    db.set("encouragements", starterEncouragements);
+  }
+});
+
+// Function to update encouragements
+const updateEncouragements = async (encouragingMessage) => {
+  try {
+    const encouragements = await db.get("encouragements");
+    let encouragementsArr = encouragements.value;
+    // console.log(encouragements);
+    // console.log(encouragementsArr);
+    encouragementsArr.push(encouragingMessage);
+    // console.log(encouragementsArr);
+    await db.set("encouragements", encouragementsArr);
+    // console.log(encouragements);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// Function to delete encouragements
+const deleteEncouragement = async (index) => {
+  try {
+    const encouragements = await db.get("encouragements");
+    let encouragementsArr = encouragements.value;
+    // console.log(encouragements);
+    // console.log(encouragementsArr);
+    if (encouragementsArr.length > index) {
+      encouragementsArr.splice(index, 1);
+      db.set("encouragements", encouragementsArr);
+    }
+    // console.log(encouragements);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 // Fetch the data from "zenquotes"
 function getQuote() {
-  return fetch("https://zenquotes.io/api/random")
-    .then((res) => {
-      return res.json();
-    })
-    .then((data) => {
-      return data[0]["q"] + " -" + data[0]["a"];
-    });
+  try {
+    return fetch("https://zenquotes.io/api/random")
+      .then((res) => {
+        return res.json();
+      })
+      .then((data) => {
+        return data[0]["q"] + " -" + data[0]["a"];
+      });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 // Set the Slash Commands
@@ -64,15 +114,12 @@ const rest = new REST({ version: "10" }).setToken(token);
 })();
 
 // Log in to Discord with your client's token
-client.on("ready", () => {
+client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
 // A listener for the event from the slashcommand
 client.on("interactionCreate", async (interaction) => {
-  // Check if the interaction is a command
-  if (!interaction.isCommand()) return;
-
   if (interaction.commandName === "ping" && interaction.isCommand()) {
     await interaction.reply("pong!!!");
   } else if (interaction.commandName === "server") {
@@ -84,21 +131,51 @@ client.on("interactionCreate", async (interaction) => {
 
 // A listener for the event from the message
 client.on("messageCreate", async (msg) => {
-  // console.log(`Message from ${msg.author.username}: ${msg.content}`);
+  // ping message
   if (msg.content === "ping") {
-    await console.log(msg.reply("pong!!!"));
-  } else if (msg.content === "$server") {
+    console.log(msg.reply("pong!!!"));
+  }
+  // $server message
+  else if (msg.content === "$server") {
     await msg.reply(
       `Server name: ${msg.guild.name}\nTotal members: ${msg.guild.memberCount}`,
     );
-  } else if (msg.content === "$inspire") {
+  }
+  // $inspire message
+  else if (msg.content === "$inspire") {
     getQuote()
       .then()
       .then((quote) => msg.channel.send(quote));
-  } else if (sadWords.some((word) => msg.content.includes(word))) {
-    const encouragement =
-      encouragements[Math.floor(Math.random() * encouragements.length)];
-    await msg.reply(encouragement);
+  }
+  // sad keyword included message
+  else if (sadWords.some((word) => msg.content.includes(word))) {
+    db.get("encouragements").then((encouragements) => {
+      const encouragement =
+        encouragements.value[
+          Math.floor(Math.random() * encouragements.value.length)
+        ];
+      msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
+    });
+  }
+  // Start with $new message (add new encouragement)
+  else if (msg.content.startsWith("$new")) {
+    let encouragingMessage = msg.content.split("$new ")[1];
+    updateEncouragements(encouragingMessage);
+    await msg.channel.send("New encouraging message added.");
+  }
+  // Start with $del message (delete encouragement)
+  else if (msg.content.startsWith("$del")) {
+    let index = parseInt(msg.content.split("$del ")[1]);
+    deleteEncouragement(index - 1);
+    await msg.channel.send(`the encouraging message number ${index} deleted.`);
+  }
+  // Start with $list message (list all encouragements)
+  else if (msg.content.startsWith("$list")) {
+    db.get("encouragements").then(async (encouragements) => {
+      encouragements.value.forEach(async (encouragement) => {
+        await msg.channel.send(encouragement);
+      });
+    });
   }
 });
 
