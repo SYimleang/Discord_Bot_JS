@@ -133,7 +133,7 @@ client.on("interactionCreate", async (interaction) => {
 client.on("messageCreate", async (msg) => {
   switch (msg.content) {
     case "ping": // ping message
-      console.log(msg.reply("pong!!!"));
+      await msg.reply("pong!!!");
       break;
     case "$server": // $server message
       await msg.reply(
@@ -153,18 +153,24 @@ client.on("messageCreate", async (msg) => {
       });
       break;
     default:
-      // sad keyword included message
-      if (sadWords.some((word) => msg.content.includes(word))) {
-        db.get("encouragements").then((encouragements) => {
-          const encouragement =
-            encouragements.value[
-              Math.floor(Math.random() * encouragements.value.length)
-            ];
-          msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
-        });
-      }
+      // sad keyword included message (check respond status)
+      db.get("responding").then((responding) => {
+        if (
+          responding.value &&
+          sadWords.some((word) => msg.content.includes(word))
+        ) {
+          db.get("encouragements").then((encouragements) => {
+            const encouragement =
+              encouragements.value[
+                Math.floor(Math.random() * encouragements.value.length)
+              ];
+            msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
+          });
+        }
+      });
+
       // Start with $new message (add new encouragement)
-      else if (msg.content.startsWith("$new")) {
+      if (msg.content.startsWith("$new")) {
         let encouragingMessage = msg.content.split("$new ")[1];
         updateEncouragements(encouragingMessage);
         await msg.channel.send("New encouraging message added.");
@@ -178,6 +184,26 @@ client.on("messageCreate", async (msg) => {
         );
       }
       break;
+  }
+
+  // Responding to sad words status management
+  if (msg.content.startsWith("$responding")) {
+    let value = msg.content.split("$responding ")[1];
+    if (value.toLowerCase() === "true") {
+      db.set("responding", true);
+      await msg.channel.send("Responding is on.");
+    } else if (value.toLowerCase() === "false") {
+      db.set("responding", false);
+      await msg.channel.send("Responding is off.");
+    } else if (value.toLowerCase() === "check") {
+      const status = await db.get("responding");
+      console.log(await db.get("responding"));
+      console.log(status.value);
+      await msg.channel.send("Responding is " + status.value);
+      console.log(db.get("responding"));
+    } else {
+      await msg.channel.send("Please enter true or false.");
+    }
   }
 });
 
