@@ -2,6 +2,7 @@
 import { Client, GatewayIntentBits, REST, Routes } from "discord.js";
 import fetch from "node-fetch";
 import Database from "@replit/database";
+import keepAlive from "./server.js";
 const token = process.env["token"];
 const guildId = process.env["guildId"];
 const clientId = process.env["clientId"];
@@ -225,6 +226,9 @@ client.on("messageCreate", async (msg) => {
     }
   }
 });
+
+// Start the server
+keepAlive();
 
 // Log in to Discord with client's token
 client.login(token);
