@@ -131,51 +131,53 @@ client.on("interactionCreate", async (interaction) => {
 
 // A listener for the event from the message
 client.on("messageCreate", async (msg) => {
-  // ping message
-  if (msg.content === "ping") {
-    console.log(msg.reply("pong!!!"));
-  }
-  // $server message
-  else if (msg.content === "$server") {
-    await msg.reply(
-      `Server name: ${msg.guild.name}\nTotal members: ${msg.guild.memberCount}`,
-    );
-  }
-  // $inspire message
-  else if (msg.content === "$inspire") {
-    getQuote()
-      .then()
-      .then((quote) => msg.channel.send(quote));
-  }
-  // sad keyword included message
-  else if (sadWords.some((word) => msg.content.includes(word))) {
-    db.get("encouragements").then((encouragements) => {
-      const encouragement =
-        encouragements.value[
-          Math.floor(Math.random() * encouragements.value.length)
-        ];
-      msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
-    });
-  }
-  // Start with $new message (add new encouragement)
-  else if (msg.content.startsWith("$new")) {
-    let encouragingMessage = msg.content.split("$new ")[1];
-    updateEncouragements(encouragingMessage);
-    await msg.channel.send("New encouraging message added.");
-  }
-  // Start with $del message (delete encouragement)
-  else if (msg.content.startsWith("$del")) {
-    let index = parseInt(msg.content.split("$del ")[1]);
-    deleteEncouragement(index - 1);
-    await msg.channel.send(`the encouraging message number ${index} deleted.`);
-  }
-  // Start with $list message (list all encouragements)
-  else if (msg.content.startsWith("$list")) {
-    db.get("encouragements").then(async (encouragements) => {
-      encouragements.value.forEach(async (encouragement) => {
-        await msg.channel.send(encouragement);
+  switch (msg.content) {
+    case "ping": // ping message
+      console.log(msg.reply("pong!!!"));
+      break;
+    case "$server": // $server message
+      await msg.reply(
+        `Server name: ${msg.guild.name}\nTotal members: ${msg.guild.memberCount}`,
+      );
+      break;
+    case "$inspire": // $inspire message
+      getQuote()
+        .then()
+        .then((quote) => msg.channel.send(quote));
+      break;
+    case "$list": // $list message
+      db.get("encouragements").then(async (encouragements) => {
+        encouragements.value.forEach(async (encouragement) => {
+          await msg.channel.send(encouragement);
+        });
       });
-    });
+      break;
+    default:
+      // sad keyword included message
+      if (sadWords.some((word) => msg.content.includes(word))) {
+        db.get("encouragements").then((encouragements) => {
+          const encouragement =
+            encouragements.value[
+              Math.floor(Math.random() * encouragements.value.length)
+            ];
+          msg.reply(`Hi ${msg.author.username}. ${encouragement}`);
+        });
+      }
+      // Start with $new message (add new encouragement)
+      else if (msg.content.startsWith("$new")) {
+        let encouragingMessage = msg.content.split("$new ")[1];
+        updateEncouragements(encouragingMessage);
+        await msg.channel.send("New encouraging message added.");
+      }
+      // Start with $del message (delete encouragement)
+      else if (msg.content.startsWith("$del")) {
+        let index = parseInt(msg.content.split("$del ")[1]);
+        deleteEncouragement(index - 1);
+        await msg.channel.send(
+          `the encouraging message number ${index} deleted.`,
+        );
+      }
+      break;
   }
 });
 
